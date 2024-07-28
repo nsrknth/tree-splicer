@@ -516,6 +516,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tree-sitter-wgsl"
+version = "0.0.1"
+source = "git+https://github.com/nsrknth/tree-sitter-wgsl#deb012216a06b72dc38db4b9d938ac019ae883bf"
+dependencies = [
+ "cc",
+ "tree-sitter",
+]
+
+[[package]]
 name = "tree-splicer"
 version = "0.5.0"
 dependencies = [
@@ -558,6 +567,15 @@ version = "0.5.0"
 dependencies = [
  "anyhow",
  "tree-sitter-typescript",
+ "tree-splicer",
+]
+
+[[package]]
+name = "tree-splicer-wgsl"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "tree-sitter-wgsl",
  "tree-splicer",
 ]
 

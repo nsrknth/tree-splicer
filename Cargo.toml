@@ -3,7 +3,7 @@ members = [
     "crates/tree-splicer",
     "crates/tree-splicer-javascript",
     "crates/tree-splicer-rust",
-    "crates/tree-splicer-typescript",
+    "crates/tree-splicer-typescript", "crates/tree-splicer-wgsl",
 ]
 
 # https://nnethercote.github.io/perf-book/build-configuration.html

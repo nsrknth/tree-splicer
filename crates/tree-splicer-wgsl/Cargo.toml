@@ -1,0 +1,11 @@
+[package]
+name = "tree-splicer-wgsl"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1"
+tree-splicer = { version = "0.5.0", path = "../tree-splicer", features = ["cli"] }
+tree-sitter-wgsl = {version = "0.0.1", git = "https://github.com/nsrknth/tree-sitter-wgsl" }
