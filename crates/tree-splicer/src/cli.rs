@@ -11,6 +11,7 @@ use clap_verbosity_flag::{InfoLevel, Verbosity};
 use tracing::{error, warn};
 use tracing_subscriber::fmt::format::FmtSpan;
 use tree_sitter::Tree;
+use uuid::Uuid;
 
 use crate::splice::{Config, Splicer};
 
@@ -188,7 +189,9 @@ pub fn main(language: tree_sitter::Language, node_types_json_str: &'static str) 
         if i == args.tests {
             break;
         }
-        std::fs::write(args.output.join(i.to_string()), out)
+        let uuid = Uuid::new_v4();
+        let filename = format!("{:04}_{}", i, uuid);
+        std::fs::write(args.output.join(filename), out)
             .context("Couldn't save generated test case")?;
     }
 
