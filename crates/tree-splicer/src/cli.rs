@@ -177,7 +177,7 @@ pub fn main(language: tree_sitter::Language, node_types_json_str: &'static str) 
         chaos: args.chaos,
         deletions: args.deletions,
         language,
-        // intra_splices: 10,
+        intra_splices: 10,
         inter_splices: args.mutations,
         max_size: args.max_size,
         node_types,

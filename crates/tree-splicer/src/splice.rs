@@ -83,7 +83,7 @@ pub struct Config {
     /// By default, deletes optional nodes. Chaotic deletions delete any node.
     pub deletions: u8,
     pub language: Language,
-    // pub intra_splices: usize,
+    pub intra_splices: usize,
     /// Perform anywhere from zero to this many inter-file splices per test.
     pub inter_splices: usize,
     /// Approximate maximum file size to produce (bytes)
@@ -105,7 +105,7 @@ pub struct Splicer<'a> {
     chaos: u8,
     deletions: u8,
     kinds: Vec<&'static str>,
-    // intra_splices: usize,
+    intra_splices: usize,
     inter_splices: usize,
     max_size: usize,
     node_types: NodeTypes,
@@ -140,7 +140,7 @@ impl<'a> Splicer<'a> {
             language: config.language,
             branches,
             kinds,
-            // intra_splices: config.intra_splices,
+            intra_splices: config.intra_splices,
             inter_splices: config.inter_splices,
             max_size: config.max_size,
             node_types: config.node_types,
@@ -247,16 +247,75 @@ impl<'a> Splicer<'a> {
         (node.id(), replace, delta)
     }
 
+    fn perform_intra_splice<'tree>(
+        &mut self,
+        text: &[u8],
+        tree: &'tree Tree,
+    ) -> (usize, Vec<u8>, isize) {
+        let source_node = self.pick_node(tree);
+        let target_node = self.pick_compatible_node(tree, source_node);
+
+        let source_text = &text[source_node.byte_range()];
+        let (id, bytes, delta) = (
+            target_node.id(),
+            source_text.to_vec(),
+            Self::delta(target_node, source_text),
+        );
+
+        (id, bytes, delta)
+    }
+
+    fn pick_compatible_node<'tree>(
+        &mut self,
+        tree: &'tree Tree,
+        source: Node<'tree>,
+    ) -> Node<'tree> {
+        let compatible_nodes: Vec<Node> = self
+            .all_nodes(tree)
+            .into_iter()
+            .filter(|n| n.kind() == source.kind())
+            .collect();
+
+        if compatible_nodes.is_empty() {
+            return source;
+        }
+
+        *compatible_nodes
+            .get(self.pick_idx(&compatible_nodes))
+            .unwrap()
+    }
+
     pub fn splice_tree(&mut self, text0: &[u8], mut tree: Tree) -> Option<Vec<u8>> {
         // TODO: Assert that text0 and tree.root_node() are the same length?
         let mut edits = Edits::default();
-        if self.inter_splices == 0 {
+        if self.intra_splices == 0 && self.inter_splices == 0 {
             return None;
         }
-        let splices = self.rng.gen_range(1..self.inter_splices);
+
+        let intra_splices = self.rng.gen_range(0..=self.intra_splices);
+        let inter_splices = self.rng.gen_range(1..=self.inter_splices);
+
         let mut text = Vec::from(text0);
         let mut sz = isize::try_from(text.len()).unwrap_or_default();
-        for i in 0..splices {
+
+        for i in 0..intra_splices {
+            let (id, bytes, delta) = self.perform_intra_splice(text.as_slice(), &tree);
+            sz += delta;
+            let sized_out = usize::try_from(sz).unwrap_or_default() >= self.max_size;
+            edits.0.insert(id, bytes);
+            if i % self.reparse == 0 || i + 1 == intra_splices || sized_out {
+                let mut result = Vec::with_capacity(usize::try_from(sz).unwrap_or_default());
+                tree_sitter_edit::render(&mut result, &tree, text.as_slice(), &edits).ok()?;
+                text = result.clone();
+                tree = parse(self.language, &String::from_utf8_lossy(text.as_slice()));
+                edits = Edits::default();
+            }
+            if sized_out {
+                return Some(text);
+            }
+        }
+
+        for i in 0..inter_splices {
             let (id, bytes, delta) = if self.rng.gen_range(0..100) < self.deletions {
                 self.delete_node(text.as_slice(), &tree)
             } else {
@@ -265,7 +324,7 @@ impl<'a> Splicer<'a> {
             sz += delta;
             let sized_out = usize::try_from(sz).unwrap_or_default() >= self.max_size;
             edits.0.insert(id, bytes);
-            if i % self.reparse == 0 || i + 1 == splices || sized_out {
+            if i % self.reparse == 0 || i + 1 == inter_splices || sized_out {
                 let mut result = Vec::with_capacity(usize::try_from(sz).unwrap_or_default());
                 tree_sitter_edit::render(&mut result, &tree, text.as_slice(), &edits).ok()?;
                 text = result.clone();
